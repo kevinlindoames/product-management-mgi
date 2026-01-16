@@ -33,5 +33,11 @@ export default defineNuxtConfig({
   css: [
     '~/assets/css/main.css',
     'vue-toastification/dist/index.css'
-  ]
+  ],
+
+  vite: {
+    optimizeDeps: {
+      exclude: ['#app-manifest']
+    }
+  }
 })

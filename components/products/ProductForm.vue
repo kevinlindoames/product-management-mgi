@@ -21,17 +21,29 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-// Configurar formulario con VeeValidate
-const { defineField, handleSubmit, errors, values } = useForm({
-  validationSchema: productSchema,
-  initialValues: props.product ? {
-    title: props.product.title,
-    description: props.product.description,
-    price: props.product.price,
-    stock: props.product.stock,
-    category: props.product.category,
-    brand: props.product.brand || ''
-  } : {
+// Obtener categorías desde la API
+const { categories, fetchCategories } = useProducts()
+
+// Cargar categorías al montar
+onMounted(async () => {
+  if (categories.value.length === 0) {
+    await fetchCategories()
+  }
+})
+
+// Función para obtener valores iniciales
+const getInitialValues = () => {
+  if (props.product) {
+    return {
+      title: props.product.title,
+      description: props.product.description,
+      price: props.product.price,
+      stock: props.product.stock,
+      category: props.product.category,
+      brand: props.product.brand || ''
+    }
+  }
+  return {
     title: '',
     description: '',
     price: 0,
@@ -39,6 +51,12 @@ const { defineField, handleSubmit, errors, values } = useForm({
     category: '',
     brand: ''
   }
+}
+
+// Configurar formulario con VeeValidate
+const { defineField, handleSubmit, errors, resetForm } = useForm({
+  validationSchema: productSchema,
+  initialValues: getInitialValues()
 })
 
 // Definir campos
@@ -49,33 +67,21 @@ const [stock, stockAttrs] = defineField('stock')
 const [category, categoryAttrs] = defineField('category')
 const [brand, brandAttrs] = defineField('brand')
 
-// Categorías predefinidas (podrías obtenerlas de la API)
-const categories = [
-  'beauty',
-  'fragrances',
-  'furniture',
-  'groceries',
-  'home-decoration',
-  'kitchen-accessories',
-  'laptops',
-  'mens-shirts',
-  'mens-shoes',
-  'mens-watches',
-  'mobile-accessories',
-  'motorcycle',
-  'skin-care',
-  'smartphones',
-  'sports-accessories',
-  'sunglasses',
-  'tablets',
-  'tops',
-  'vehicle',
-  'womens-bags',
-  'womens-dresses',
-  'womens-jewellery',
-  'womens-shoes',
-  'womens-watches'
-]
+// Observar cambios en el producto y actualizar el formulario
+watch(() => props.product, (newProduct) => {
+  if (newProduct) {
+    resetForm({
+      values: {
+        title: newProduct.title,
+        description: newProduct.description,
+        price: newProduct.price,
+        stock: newProduct.stock,
+        category: newProduct.category,
+        brand: newProduct.brand || ''
+      }
+    })
+  }
+}, { immediate: true })
 
 // Enviar formulario
 const onSubmit = handleSubmit((values) => {
@@ -85,6 +91,11 @@ const onSubmit = handleSubmit((values) => {
 // Cancelar
 const handleCancel = () => {
   emit('cancel')
+}
+
+// Formatear nombre de categoría
+const formatCategoryName = (cat: string) => {
+  return cat.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }
 </script>
 
@@ -194,11 +205,14 @@ const handleCancel = () => {
       >
         <option value="">Selecciona una categoría</option>
         <option v-for="cat in categories" :key="cat" :value="cat">
-          {{ cat.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') }}
+          {{ formatCategoryName(cat) }}
         </option>
       </select>
       <p v-if="errors.category" class="mt-1.5 text-sm text-red-500">
         {{ errors.category }}
+      </p>
+      <p v-if="categories.length === 0" class="mt-1.5 text-xs text-gray-500">
+        Cargando categorías...
       </p>
     </div>
 

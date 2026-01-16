@@ -1,5 +1,5 @@
 // composables/useProducts.ts
-import type { Product, ProductsResponse, CreateProductDto } from '~/types'
+import type { Product, ProductsResponse, CreateProductDto, PaginationParams } from '~/types'
 
 export const useProducts = () => {
   const config = useRuntimeConfig()
@@ -11,6 +11,7 @@ export const useProducts = () => {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   const total = ref(0)
+  const categories = ref<string[]>([])
 
   // Headers con autenticación
   const getHeaders = () => ({
@@ -18,19 +19,43 @@ export const useProducts = () => {
     'Authorization': `Bearer ${authStore.token}`
   })
 
-  // Obtener todos los productos
-  const fetchProducts = async (limit: number = 30, skip: number = 0) => {
-    isLoading.value = true
-    error.value = null
-
+  // Obtener categorías desde la API
+  const fetchCategories = async () => {
     try {
-      const response = await $fetch<ProductsResponse>(
-        `/products?limit=${limit}&skip=${skip}`,
+      const response = await $fetch<string[]>(
+        '/products/category-list',
         {
           baseURL: config.public.apiBase,
           headers: getHeaders()
         }
       )
+      categories.value = response
+      return response
+    } catch (e: any) {
+      console.error('Error fetching categories:', e)
+      return []
+    }
+  }
+
+  // Obtener productos con paginación y filtros
+  const fetchProducts = async (params: PaginationParams = {}) => {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const queryParams = new URLSearchParams()
+      
+      if (params.limit) queryParams.append('limit', params.limit.toString())
+      if (params.skip) queryParams.append('skip', params.skip.toString())
+      if (params.sortBy) queryParams.append('sortBy', params.sortBy)
+      if (params.order) queryParams.append('order', params.order)
+
+      const url = `/products${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      
+      const response = await $fetch<ProductsResponse>(url, {
+        baseURL: config.public.apiBase,
+        headers: getHeaders()
+      })
       
       products.value = response.products
       total.value = response.total
@@ -45,18 +70,55 @@ export const useProducts = () => {
     }
   }
 
+  // Obtener productos por categoría
+  const fetchProductsByCategory = async (category: string, params: PaginationParams = {}) => {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const queryParams = new URLSearchParams()
+      
+      if (params.limit) queryParams.append('limit', params.limit.toString())
+      if (params.skip) queryParams.append('skip', params.skip.toString())
+
+      const url = `/products/category/${category}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      
+      const response = await $fetch<ProductsResponse>(url, {
+        baseURL: config.public.apiBase,
+        headers: getHeaders()
+      })
+      
+      products.value = response.products
+      total.value = response.total
+      
+      return response
+    } catch (e: any) {
+      error.value = e.data?.message || 'Error al filtrar productos'
+      console.error('Error fetching products by category:', e)
+      throw e
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   // Buscar productos
-  const searchProducts = async (query: string) => {
+  const searchProducts = async (query: string, params: PaginationParams = {}) => {
     if (!query.trim()) {
-      return fetchProducts()
+      return fetchProducts(params)
     }
 
     isLoading.value = true
     error.value = null
 
     try {
+      const queryParams = new URLSearchParams()
+      queryParams.append('q', query)
+      
+      if (params.limit) queryParams.append('limit', params.limit.toString())
+      if (params.skip) queryParams.append('skip', params.skip.toString())
+
       const response = await $fetch<ProductsResponse>(
-        `/products/search?q=${encodeURIComponent(query)}`,
+        `/products/search?${queryParams.toString()}`,
         {
           baseURL: config.public.apiBase,
           headers: getHeaders()
@@ -110,6 +172,10 @@ export const useProducts = () => {
         body: productData
       })
       
+      // Optimistic UI: agregar al principio de la lista
+      products.value.unshift(response)
+      total.value += 1
+      
       return response
     } catch (e: any) {
       error.value = e.data?.message || 'Error al crear el producto'
@@ -133,6 +199,17 @@ export const useProducts = () => {
         body: productData
       })
       
+      // Optimistic UI: actualizar en la lista
+      const index = products.value.findIndex(p => p.id === id)
+      if (index !== -1) {
+        products.value[index] = { ...products.value[index], ...response }
+      }
+      
+      // Actualizar currentProduct si es el mismo
+      if (currentProduct.value?.id === id) {
+        currentProduct.value = { ...currentProduct.value, ...response }
+      }
+      
       return response
     } catch (e: any) {
       error.value = e.data?.message || 'Error al actualizar el producto'
@@ -143,20 +220,30 @@ export const useProducts = () => {
     }
   }
 
-  // Ordenar productos localmente
-  const sortByPrice = (ascending: boolean = true) => {
-    products.value = [...products.value].sort((a, b) => {
-      return ascending ? a.price - b.price : b.price - a.price
-    })
-  }
+  // Eliminar producto (simulado)
+  const deleteProduct = async (id: number) => {
+    isLoading.value = true
+    error.value = null
 
-  // Filtrar por categoría
-  const filterByCategory = (category: string) => {
-    if (!category) return fetchProducts()
-    
-    products.value = products.value.filter(p => 
-      p.category.toLowerCase() === category.toLowerCase()
-    )
+    try {
+      const response = await $fetch<Product>(`/products/${id}`, {
+        baseURL: config.public.apiBase,
+        method: 'DELETE',
+        headers: getHeaders()
+      })
+      
+      // Optimistic UI: remover de la lista
+      products.value = products.value.filter(p => p.id !== id)
+      total.value -= 1
+      
+      return response
+    } catch (e: any) {
+      error.value = e.data?.message || 'Error al eliminar el producto'
+      console.error('Error deleting product:', e)
+      throw e
+    } finally {
+      isLoading.value = false
+    }
   }
 
   return {
@@ -166,13 +253,15 @@ export const useProducts = () => {
     isLoading,
     error,
     total,
+    categories,
     // Methods
     fetchProducts,
+    fetchProductsByCategory,
     searchProducts,
     fetchProductById,
     createProduct,
     updateProduct,
-    sortByPrice,
-    filterByCategory
+    deleteProduct,
+    fetchCategories
   }
 }

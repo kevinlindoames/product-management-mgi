@@ -28,18 +28,53 @@ export interface AuthResponse {
   refreshToken: string
 }
 
+export interface Review {
+  rating: number
+  comment: string
+  date: string
+  reviewerName: string
+  reviewerEmail: string
+}
+
+export interface Dimensions {
+  width: number
+  height: number
+  depth: number
+}
+
+export interface Meta {
+  createdAt: string
+  updatedAt: string
+  barcode: string
+  qrCode: string
+}
+
 export interface Product {
   id: number
   title: string
   description: string
+  category: string
   price: number
   discountPercentage: number
   rating: number
   stock: number
+  tags: string[]
   brand: string
-  category: string
+  sku: string
+  weight: number
+  dimensions: Dimensions
+  warrantyInformation: string
+  shippingInformation: string
+  availabilityStatus: string
+  reviews: Review[]
+  returnPolicy: string
+  minimumOrderQuantity: number
+  meta: Meta
   thumbnail: string
   images: string[]
+  // Campos opcionales para cuando se crea/edita
+  isDeleted?: boolean
+  deletedOn?: string
 }
 
 export interface ProductsResponse {
@@ -65,4 +100,11 @@ export interface UpdateProductDto extends Partial<CreateProductDto> {
 export interface ApiError {
   message: string
   status?: number
+}
+
+export interface PaginationParams {
+  limit?: number
+  skip?: number
+  sortBy?: string
+  order?: 'asc' | 'desc'
 }
