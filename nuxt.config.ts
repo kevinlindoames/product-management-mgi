@@ -39,5 +39,8 @@ export default defineNuxtConfig({
     optimizeDeps: {
       exclude: ['#app-manifest']
     }
+  },
+    nitro: {
+    preset: 'vercel'
   }
 })
