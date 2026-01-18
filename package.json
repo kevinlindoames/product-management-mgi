@@ -12,6 +12,7 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@kyvg/vue3-notification": "^3.4.2",
     "@pinia/nuxt": "^0.11.3",
     "@vueuse/core": "^14.1.0",
     "nuxt": "^3.20.2",
@@ -19,7 +20,6 @@
     "vee-validate": "^4.15.1",
     "vue": "^3.5.26",
     "vue-router": "^4.6.4",
-    "vue-toastification": "^2.0.0-rc.5",
     "yup": "^1.7.1"
   },
   "devDependencies": {

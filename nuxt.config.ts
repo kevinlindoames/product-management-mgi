@@ -31,8 +31,7 @@ export default defineNuxtConfig({
   },
 
   css: [
-    '~/assets/css/main.css',
-    'vue-toastification/dist/index.css'
+    '~/assets/css/main.css'
   ],
 
   vite: {
@@ -40,7 +39,8 @@ export default defineNuxtConfig({
       exclude: ['#app-manifest']
     }
   },
-    nitro: {
+
+  nitro: {
     preset: 'vercel'
   }
 })

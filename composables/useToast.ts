@@ -1,13 +1,35 @@
 // composables/useToast.ts
-import { useToast as useToastification } from 'vue-toastification'
+import { notify } from '@kyvg/vue3-notification'
 
 export const useToast = () => {
-  const toast = useToastification()
-
   return {
-    success: (message: string) => toast.success(message),
-    error: (message: string) => toast.error(message),
-    info: (message: string) => toast.info(message),
-    warning: (message: string) => toast.warning(message)
+    success: (message: string) => {
+      notify({
+        type: 'success',
+        text: message,
+        duration: 3000
+      })
+    },
+    error: (message: string) => {
+      notify({
+        type: 'error',
+        text: message,
+        duration: 3000
+      })
+    },
+    info: (message: string) => {
+      notify({
+        type: 'info',
+        text: message,
+        duration: 3000
+      })
+    },
+    warning: (message: string) => {
+      notify({
+        type: 'warn',
+        text: message,
+        duration: 3000
+      })
+    }
   }
 }
